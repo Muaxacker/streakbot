@@ -108,6 +108,9 @@ REPORT_EDIT          = 2
 # Quiz conversation states
 QUIZ_ANSWER = 10
 
+# Voice transcript test state
+VOICE_TRANSCRIPT_WAIT = 20
+
 MILESTONES = [7, 14, 30, 60, 100]
 
 MAIN_MENU = ReplyKeyboardMarkup(
@@ -1316,6 +1319,79 @@ async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(text, parse_mode=ParseMode.HTML, reply_markup=MAIN_MENU)
 
 
+async def voicetranscript_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """/voicetranscript — test voice transcription. Send a voice note, get back the text."""
+    await update.message.reply_text(
+        "🎙 <b>Voice Transcript Test</b>\n\n"
+        "Send a voice note now and I'll transcribe it to text.\n\n"
+        "<i>This tests whether Groq Whisper is working correctly.\n"
+        "Use /canceltranscript to exit.</i>",
+        parse_mode=ParseMode.HTML,
+        reply_markup=MAIN_MENU,
+    )
+    return VOICE_TRANSCRIPT_WAIT
+
+
+async def voicetranscript_receive(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Receive the voice note, transcribe it, send back the text."""
+    voice = update.message.voice
+    if not voice:
+        await update.message.reply_text(
+            "That's not a voice note. Send a voice message or use /canceltranscript.",
+            parse_mode=ParseMode.HTML,
+        )
+        return VOICE_TRANSCRIPT_WAIT
+
+    duration = voice.duration
+    await update.message.reply_text(
+        f"⏳ <i>Transcribing your {duration}s voice note...</i>",
+        parse_mode=ParseMode.HTML,
+    )
+
+    voice_file = await context.bot.get_file(voice.file_id)
+    with tempfile.NamedTemporaryFile(suffix=".ogg", delete=False) as tmp:
+        tmp_path = tmp.name
+    await voice_file.download_to_drive(tmp_path)
+
+    try:
+        transcript = await voice_module.transcribe_voice(tmp_path)
+    finally:
+        os.unlink(tmp_path)
+
+    if not transcript:
+        await update.message.reply_text(
+            "❌ <b>Transcription failed.</b>\n\n"
+            "Possible reasons:\n"
+            "• GROQ_API_KEY is missing or invalid\n"
+            "• Voice was too quiet or unclear\n"
+            "• Groq API is temporarily down\n\n"
+            "Check your .env file and try again.",
+            parse_mode=ParseMode.HTML,
+            reply_markup=MAIN_MENU,
+        )
+        return ConversationHandler.END
+
+    word_count = len(transcript.split())
+    await update.message.reply_text(
+        f"✅ <b>Transcription successful!</b>\n\n"
+        f"⏱ Duration: {duration}s\n"
+        f"📝 Words: {word_count}\n\n"
+        f"<b>Text:</b>\n<i>{safe(transcript)}</i>",
+        parse_mode=ParseMode.HTML,
+        reply_markup=MAIN_MENU,
+    )
+    log.info(f"Voice transcript test by user {update.effective_user.id}: {word_count} words")
+    return ConversationHandler.END
+
+
+async def voicetranscript_cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(
+        "❌ Transcript test cancelled.",
+        reply_markup=MAIN_MENU,
+    )
+    return ConversationHandler.END
+
+
 async def about_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """/about — what StreakBot is and who built it"""
     data = storage.load()
@@ -1499,6 +1575,7 @@ async def set_bot_commands(bot: Bot):
         BotCommand("comparescores", "Compare both accountability scores"),
         BotCommand("struggles", "Your struggle topics"),
         BotCommand("voicecompare", "Compare voice explanations with partner"),
+        BotCommand("voicetranscript", "Test voice transcription — send voice, get text"),
         BotCommand("session", "Log a live code review session"),
         BotCommand("progressreport", "Monthly or weekly progress report"),
         BotCommand("lessonpick", "Pick a lesson from an interactive list"),
@@ -1565,6 +1642,22 @@ def main():
 
     app.add_handler(report_handler)
     app.add_handler(quiz_handler)
+
+    transcript_handler = ConversationHandler(
+        entry_points=[CommandHandler("voicetranscript", voicetranscript_cmd)],
+        states={
+            VOICE_TRANSCRIPT_WAIT: [
+                MessageHandler(filters.VOICE, voicetranscript_receive),
+                CommandHandler("canceltranscript", voicetranscript_cancel),
+            ],
+        },
+        fallbacks=[CommandHandler("canceltranscript", voicetranscript_cancel)],
+        per_user=True,
+        per_chat=True,
+        allow_reentry=True,
+    )
+    app.add_handler(transcript_handler)
+
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("help", help_cmd))
     app.add_handler(CommandHandler("about", about_cmd))
