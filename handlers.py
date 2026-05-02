@@ -6,7 +6,6 @@ Registered into bot.py via register_advanced_handlers(app).
 
 import os
 import logging
-import tempfile
 from html import escape
 from datetime import date
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup

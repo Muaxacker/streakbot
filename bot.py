@@ -47,6 +47,7 @@ import xp as xp_module
 import spaced_repetition as sr
 import accountability as acc
 import progress_report as report_module
+import voice as voice_module
 from handlers import register_advanced_handlers
 from health import start_health_server
 
@@ -450,7 +451,6 @@ async def report_receive_voice(update: Update, context: ContextTypes.DEFAULT_TYP
     await voice_file.download_to_drive(tmp_path)
 
     try:
-        import voice as voice_module
         transcript = await voice_module.transcribe_voice(tmp_path)
     finally:
         os.unlink(tmp_path)
