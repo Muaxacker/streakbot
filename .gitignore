@@ -37,3 +37,6 @@ ENV/
 dist/
 build/
 *.egg-info/
+
+# Docker
+.dockerignore

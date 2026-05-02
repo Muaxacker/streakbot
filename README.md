@@ -172,20 +172,52 @@ On first start, the bot sends both users a message with the full keyboard menu.
 
 ## Deploying (Free, 24/7)
 
-### Railway.app (recommended)
+### Koyeb (recommended — free, no credit card, never sleeps)
 
-1. Push your code to GitHub (without `.env` — it's in `.gitignore`)
-2. Go to [railway.app](https://railway.app) → New Project → Deploy from GitHub
-3. Add environment variables in the Railway dashboard:
-   - `BOT_TOKEN`, `GROQ_API_KEY`, `GROUP_CHAT_ID`, `USER1_ID`, `USER2_ID`, `REMINDER_TIME`
-4. Deploy — the bot runs 24/7 for free
+Koyeb is the best free option for a Telegram bot. No credit card required, no sleep after idle, runs 24/7.
 
-> **Note:** Railway's free tier has a monthly usage limit. The bot is lightweight and stays well within it.
+1. Push your code to GitHub (`.env` is blocked by `.gitignore` — your secrets stay local)
+2. Go to [koyeb.com](https://www.koyeb.com) → Create account (free, no card)
+3. Click **Create App** → **GitHub** → select your `streakbot` repo
+4. Koyeb auto-detects the `Dockerfile`
+5. Set these environment variables in the Koyeb dashboard:
 
-### Other options
-- **Render** — similar to Railway, free tier available
-- **VPS** — any Linux server with Python 3.10+ works
-- **Local** — runs fine on your machine while it's on
+| Variable | Value |
+|----------|-------|
+| `BOT_TOKEN` | Your Telegram bot token |
+| `GROQ_API_KEY` | Your Groq API key |
+| `GROUP_CHAT_ID` | Your group chat ID (starts with -100) |
+| `USER1_ID` | Your Telegram user ID |
+| `USER2_ID` | Your partner's Telegram user ID |
+| `REMINDER_TIME` | e.g. `20:00` |
+
+6. Set the **health check path** to `/` and **port** to `8000`
+7. Deploy — the bot runs 24/7 for free
+
+> The `health.py` file handles Koyeb's health check requirement automatically. It runs a tiny HTTP server on port 8000 alongside the bot.
+
+---
+
+### Railway (alternative — free tier, no card needed)
+
+1. Go to [railway.app](https://railway.app) → New Project → Deploy from GitHub
+2. Select your repo
+3. Add the 6 environment variables
+4. Deploy — uses the `Procfile` automatically
+
+---
+
+### Render (alternative — sleeps after 15 min idle)
+
+Not ideal for a bot since it sleeps when inactive. Use Koyeb instead.
+
+---
+
+### Local
+
+```bash
+python bot.py
+```
 
 ---
 

@@ -47,6 +47,7 @@ import spaced_repetition as sr
 import accountability as acc
 import progress_report as report_module
 from handlers import register_advanced_handlers
+from health import start_health_server
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 GROUP_CHAT_ID = int(os.getenv("GROUP_CHAT_ID", "0"))
@@ -1169,6 +1170,10 @@ async def set_bot_commands(bot: Bot):
 
 
 def main():
+    # Start health check server for Koyeb (runs on port 8000)
+    start_health_server(port=8000)
+    log.info("Health check server started on port 8000")
+
     app = ApplicationBuilder().token(BOT_TOKEN).build()
 
     report_handler = ConversationHandler(
