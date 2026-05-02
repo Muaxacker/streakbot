@@ -1794,7 +1794,7 @@ def main():
         await schedule_reminder(application)
         log.info(f"StreakBot started. Reminder at {storage.get_reminder_time()} daily.")
 
-        # Push the updated keyboard to both users so it refreshes immediately
+        # Push updated keyboard to both users in private chat
         for uid in [USER1_ID, USER2_ID]:
             if uid == 0:
                 continue
@@ -1804,15 +1804,26 @@ def main():
                     chat_id=uid,
                     text=(
                         f"🔄 <b>StreakBot restarted</b>\n\n"
-                        f"Hey {safe(name)}! Menu updated with all new commands.\n\n"
-                        f"New: /interview /reviews /score /voicecompare\n"
-                        f"/session /progressreport /lessonpick /struggles"
+                        f"Hey {safe(name)}! All systems running.\n"
+                        f"Use /dashboard to open the web app."
                     ),
                     parse_mode=ParseMode.HTML,
                     reply_markup=MAIN_MENU,
                 )
             except Exception as e:
                 log.warning(f"Could not push menu to {uid}: {e}")
+
+        # Also push updated keyboard to the group
+        if GROUP_CHAT_ID != 0:
+            try:
+                await application.bot.send_message(
+                    chat_id=GROUP_CHAT_ID,
+                    text="🔄 <b>StreakBot restarted</b> — menu updated.",
+                    parse_mode=ParseMode.HTML,
+                    reply_markup=MAIN_MENU,
+                )
+            except Exception as e:
+                log.warning(f"Could not push menu to group: {e}")
 
     app.post_init = post_init
     app.run_polling(drop_pending_updates=True)
