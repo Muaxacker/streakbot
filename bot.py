@@ -10,6 +10,7 @@ Requires .env file with:
 """
 
 import logging
+import logging.handlers
 import os
 import tempfile
 from datetime import datetime
@@ -49,16 +50,59 @@ import progress_report as report_module
 from handlers import register_advanced_handlers
 from health import start_health_server
 
-BOT_TOKEN = os.getenv("BOT_TOKEN")
+# ─── Config ───────────────────────────────────────────────────────────────────
+
+BOT_TOKEN     = os.getenv("BOT_TOKEN")
 GROUP_CHAT_ID = int(os.getenv("GROUP_CHAT_ID", "0"))
-USER1_ID = int(os.getenv("USER1_ID", "0"))
-USER2_ID = int(os.getenv("USER2_ID", "0"))
+USER1_ID      = int(os.getenv("USER1_ID", "0"))
+USER2_ID      = int(os.getenv("USER2_ID", "0"))
 REMINDER_TIME = os.getenv("REMINDER_TIME", "20:00")
 
+# ─── Logging — file + console ─────────────────────────────────────────────────
+
+logging.basicConfig(
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    level=logging.INFO,
+    handlers=[
+        logging.StreamHandler(),
+        logging.handlers.RotatingFileHandler(
+            "streakbot.log",
+            maxBytes=2 * 1024 * 1024,  # 2 MB
+            backupCount=3,
+            encoding="utf-8",
+        ),
+    ],
+)
+log = logging.getLogger(__name__)
+
+# ─── Startup validation ───────────────────────────────────────────────────────
+
+def _validate_config():
+    """Warn loudly if required env vars are missing."""
+    required = {
+        "BOT_TOKEN": BOT_TOKEN,
+        "GROUP_CHAT_ID": os.getenv("GROUP_CHAT_ID"),
+        "USER1_ID": os.getenv("USER1_ID"),
+        "USER2_ID": os.getenv("USER2_ID"),
+        "GROQ_API_KEY": os.getenv("GROQ_API_KEY"),
+    }
+    missing = [k for k, v in required.items() if not v]
+    if missing:
+        log.critical(f"MISSING REQUIRED ENV VARS: {', '.join(missing)}")
+        log.critical("Copy .env.example to .env and fill in all values.")
+        raise SystemExit(1)
+    if GROUP_CHAT_ID == 0 or USER1_ID == 0 or USER2_ID == 0:
+        log.critical("GROUP_CHAT_ID, USER1_ID, USER2_ID must be non-zero integers.")
+        raise SystemExit(1)
+    log.info("Config validated — all required env vars present.")
+
+
+# ─── Conversation states ──────────────────────────────────────────────────────
+
 # Report conversation states
-REPORT_WAITING_INPUT = 0   # waiting for text or voice
-REPORT_CONFIRM       = 1   # showing confirmation card, waiting for confirm/edit
-REPORT_EDIT          = 2   # user chose to edit — waiting for corrected free text
+REPORT_WAITING_INPUT = 0
+REPORT_CONFIRM       = 1
+REPORT_EDIT          = 2
 
 # Quiz conversation states
 QUIZ_ANSWER = 10
@@ -81,12 +125,6 @@ MAIN_MENU = ReplyKeyboardMarkup(
     one_time_keyboard=False,
     input_field_placeholder="Choose a StreakBot command",
 )
-
-logging.basicConfig(
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    level=logging.INFO,
-)
-log = logging.getLogger(__name__)
 
 
 def safe(value: str | None) -> str:
@@ -1138,9 +1176,319 @@ async def menu_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 
+async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """/help [category] — detailed help per category"""
+    args = context.args or []
+    cat = args[0].lower() if args else ""
+
+    if cat == "daily":
+        text = (
+            "📅 <b>Daily Commands</b>\n"
+            "━━━━━━━━━━━━━━━━━━━━\n\n"
+            "<b>/report</b>\n"
+            "Submit today's learning. Type naturally or send a voice note.\n"
+            "AI extracts: what you learned, time spent, difficulty, next topic.\n"
+            "You confirm before saving. Use /cancel to exit.\n\n"
+            "<b>/streak</b>\n"
+            "Shows the shared dashboard — streak, best streak, both users' status.\n\n"
+            "<b>/summary</b>\n"
+            "AI summary of today's learning. Both must report first.\n\n"
+            "<b>/weekly</b>\n"
+            "AI review of the past 7 days with topic list and motivation.\n\n"
+            "<b>/history [N]</b>\n"
+            "Last N days of reports (default 7, max 30).\n"
+            "Example: /history 14"
+        )
+    elif cat == "learning":
+        text = (
+            "🧠 <b>Learning Tools</b>\n"
+            "━━━━━━━━━━━━━━━━━━━━\n\n"
+            "<b>/quiz</b>\n"
+            "3 questions from today's topics. AI grades each answer 1-5.\n"
+            "Use /skipquiz to skip, /cancelquiz to exit.\n\n"
+            "<b>/interview</b>\n"
+            "Real interview questions from your recent topics.\n"
+            "Graded like an actual interviewer — hire/no-hire signal.\n"
+            "/interview weekly — uses this week's topics.\n"
+            "Use /skipinterview or /cancelinterview.\n\n"
+            "<b>/reviews</b>\n"
+            "Spaced repetition — topics due for review today (3/7/14 days after studying).\n"
+            "/reviews all — see your full schedule.\n"
+            "Use /skipreview to skip.\n\n"
+            "<b>/voicecompare</b>\n"
+            "Both explain the same topic via voice. AI compares clarity, depth, examples.\n"
+            "Use /cancelcompare to exit."
+        )
+    elif cat == "accountability":
+        text = (
+            "📊 <b>Accountability</b>\n"
+            "━━━━━━━━━━━━━━━━━━━━\n\n"
+            "<b>/score</b>\n"
+            "Your accountability score (0-100) across 5 dimensions:\n"
+            "Consistency (40) + Voice (20) + Quiz (20) + Study time (10) + Course (10)\n\n"
+            "<b>/comparescores</b>\n"
+            "Side-by-side comparison with your partner.\n\n"
+            "<b>/struggles</b>\n"
+            "Topics auto-added when you mark difficulty as hard or score low.\n"
+            "/struggles resolve [topic] — mark one as conquered.\n\n"
+            "<b>/progressreport</b>\n"
+            "Monthly progress report with AI narrative.\n"
+            "/progressreport week — this week only."
+        )
+    elif cat == "course":
+        text = (
+            "📚 <b>Course Tracker</b>\n"
+            "━━━━━━━━━━━━━━━━━━━━\n\n"
+            "<b>/lessonpick</b>\n"
+            "Tap-to-select lesson list with inline buttons. Easiest way to mark lessons.\n\n"
+            "<b>/lesson</b> — current lesson status\n"
+            "<b>/lesson list</b> — all lessons this week\n"
+            "<b>/lesson done video</b> — mark video watched\n"
+            "<b>/lesson done notes</b> — mark notes read\n"
+            "<b>/lesson done exercise</b> — mark exercise done\n"
+            "<b>/lesson progress</b> — full course % bar\n\n"
+            "Each lesson needs all 3 steps to count as complete.\n"
+            "Next week locks until Friday's project is submitted."
+        )
+    elif cat == "project":
+        text = (
+            "📦 <b>Weekly Project</b>\n"
+            "━━━━━━━━━━━━━━━━━━━━\n\n"
+            "<b>/project submit [github url]</b>\n"
+            "Submit your GitHub repo. AI reviews code quality, topic match, best practices.\n"
+            "Example: /project submit https://github.com/you/week3\n\n"
+            "<b>/project status</b>\n"
+            "See who submitted this week.\n\n"
+            "<b>/project compare</b>\n"
+            "Side-by-side AI comparison of both repos.\n\n"
+            "Projects are due every Friday.\n"
+            "Next week's lessons are locked until you submit."
+        )
+    elif cat == "session":
+        text = (
+            "🎥 <b>Live Sessions</b>\n"
+            "━━━━━━━━━━━━━━━━━━━━\n\n"
+            "<b>/session start</b> — begin a live code review session\n"
+            "<b>/session end</b> — end it and log the duration\n"
+            "<b>/session rate 5 [takeaway]</b> — rate 1-5 and share what you learned\n"
+            "Example: /session rate 4 I learned how to structure Express routes\n\n"
+            "<b>/session log</b> — session history with stats"
+        )
+    elif cat == "xp":
+        text = (
+            "⚡ <b>XP &amp; Levels</b>\n"
+            "━━━━━━━━━━━━━━━━━━━━\n\n"
+            "<b>/xp</b> — your total XP, level, and progress bar\n"
+            "<b>/leaderboard</b> — ranking between you and your partner\n\n"
+            "<b>How to earn XP:</b>\n"
+            "Daily report: +10\n"
+            "Voice note (score 6-7): +20\n"
+            "Voice note (score 8-9): +30\n"
+            "Voice note (score 10): +50\n"
+            "Lesson step: +5\n"
+            "Lesson complete: +15\n"
+            "Weekly project: +50\n"
+            "Project score 7-8: +20 bonus\n"
+            "Project score 9-10: +40 bonus\n"
+            "Review remembered: +15\n"
+            "Topic mastered: +30\n"
+            "Interview completed: +20\n"
+            "Streak milestones: +25 to +500\n\n"
+            "<b>10 levels:</b> Beginner → Explorer → Builder → Developer\n"
+            "→ Engineer → Senior Dev → Architect → Full Stack Pro\n"
+            "→ Tech Lead → Elite Coder"
+        )
+    else:
+        text = (
+            "❓ <b>StreakBot Help</b>\n"
+            "━━━━━━━━━━━━━━━━━━━━\n\n"
+            "Get detailed help for any category:\n\n"
+            "/help daily — report, streak, summary, history\n"
+            "/help learning — quiz, interview, reviews, voice compare\n"
+            "/help accountability — score, struggles, progress report\n"
+            "/help course — lesson tracker, quick-pick\n"
+            "/help project — weekly GitHub project\n"
+            "/help session — live code review sessions\n"
+            "/help xp — XP system, levels, leaderboard\n\n"
+            "Or use /about to learn what StreakBot is."
+        )
+
+    await update.message.reply_text(text, parse_mode=ParseMode.HTML, reply_markup=MAIN_MENU)
+
+
+async def about_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """/about — what StreakBot is and who built it"""
+    data = storage.load()
+    streak = data.get("streak", 0)
+    longest = data.get("longest_streak", 0)
+    total_days = len(data.get("reports", {}))
+    name1 = storage.get_user_name(USER1_ID, data)
+    name2 = storage.get_user_name(USER2_ID, data)
+
+    await update.message.reply_text(
+        "🤖 <b>About StreakBot</b>\n"
+        "━━━━━━━━━━━━━━━━━━━━\n\n"
+        "StreakBot is a personal accountability system built for two learning partners "
+        "going through the Evangadi Tech full stack bootcamp together.\n\n"
+        "<b>What it tracks:</b>\n"
+        "Daily learning reports • Streak consistency\n"
+        "Voice explanations • Quiz performance\n"
+        "Interview readiness • Spaced repetition\n"
+        "Course progress • Weekly projects\n"
+        "Live sessions • Accountability score\n\n"
+        "<b>Powered by:</b>\n"
+        "🤖 Groq (llama-3.3-70b + Whisper)\n"
+        "📱 python-telegram-bot\n"
+        "🐍 Python 3.11\n\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        f"<b>This bot's stats:</b>\n"
+        f"👥 Partners: {safe(name1)} &amp; {safe(name2)}\n"
+        f"🔥 Current streak: {streak} days\n"
+        f"🏆 Best streak: {longest} days\n"
+        f"📅 Total days tracked: {total_days}\n\n"
+        "GitHub: github.com/Muaxacker/streakbot",
+        parse_mode=ParseMode.HTML,
+        reply_markup=MAIN_MENU,
+    )
+
+
+async def backup_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """/backup — send data files to admin (private chat only)"""
+    user = update.effective_user
+    if user.id not in (USER1_ID, USER2_ID):
+        await update.message.reply_text("🚫 Not authorized.")
+        return
+
+    if update.effective_chat.type != "private":
+        await update.message.reply_text(
+            "⚠️ Use /backup in a private chat with the bot for security.",
+            parse_mode=ParseMode.HTML,
+        )
+        return
+
+    import json
+    files_to_backup = {
+        "data.json": "data.json",
+        "xp.json": "xp.json",
+        "lessons.json": "lessons.json",
+        "sessions.json": "sessions.json",
+    }
+
+    sent = 0
+    for filename, filepath in files_to_backup.items():
+        if os.path.exists(filepath):
+            try:
+                await context.bot.send_document(
+                    chat_id=user.id,
+                    document=open(filepath, "rb"),
+                    filename=filename,
+                    caption=f"📦 Backup: {filename}",
+                )
+                sent += 1
+            except Exception as e:
+                log.error(f"Backup send error for {filename}: {e}")
+
+    await update.message.reply_text(
+        f"✅ <b>Backup sent!</b>\n\n"
+        f"Sent {sent} file(s) to your private chat.\n"
+        f"<i>Save these somewhere safe.</i>",
+        parse_mode=ParseMode.HTML,
+    )
+    log.info(f"Backup sent to user {user.id} ({user.first_name})")
+
+
+async def admin_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """/admin — admin panel (both users are admins)"""
+    user = update.effective_user
+    if user.id not in (USER1_ID, USER2_ID):
+        await update.message.reply_text("🚫 Not authorized.")
+        return
+
+    args = context.args or []
+
+    if not args:
+        data = storage.load()
+        xp1 = xp_module.get_user_xp(USER1_ID)
+        xp2 = xp_module.get_user_xp(USER2_ID)
+        name1 = storage.get_user_name(USER1_ID, data)
+        name2 = storage.get_user_name(USER2_ID, data)
+
+        # Log file size
+        log_size = "—"
+        if os.path.exists("streakbot.log"):
+            log_size = f"{round(os.path.getsize('streakbot.log') / 1024, 1)} KB"
+
+        lines = [
+            "🛠 <b>Admin Panel</b>",
+            "━━━━━━━━━━━━━━━━━━━━",
+            "",
+            f"👤 {safe(name1)}: {xp1} XP",
+            f"👤 {safe(name2)}: {xp2} XP",
+            f"🔥 Streak: {data['streak']} days",
+            f"📅 Total reports: {sum(len(v) for v in data.get('reports', {}).values())}",
+            f"📋 Log size: {log_size}",
+            "",
+            "<b>Admin commands:</b>",
+            "/admin broadcast [message] — send to group",
+            "/admin resetxp [user_id] — reset XP for a user",
+            "/admin logs — get the log file",
+            "/backup — download all data files",
+            "/resetstreak — reset the streak",
+        ]
+        await update.message.reply_text("\n".join(lines), parse_mode=ParseMode.HTML)
+        return
+
+    # /admin broadcast [message]
+    if args[0] == "broadcast" and len(args) > 1:
+        msg = " ".join(args[1:])
+        await context.bot.send_message(
+            chat_id=GROUP_CHAT_ID,
+            text=f"📢 <b>Admin Message</b>\n\n{escape(msg)}",
+            parse_mode=ParseMode.HTML,
+        )
+        await update.message.reply_text("✅ Broadcast sent to group.")
+        log.info(f"Admin broadcast by {user.id}: {msg}")
+        return
+
+    # /admin logs
+    if args[0] == "logs":
+        if os.path.exists("streakbot.log"):
+            await context.bot.send_document(
+                chat_id=user.id,
+                document=open("streakbot.log", "rb"),
+                filename="streakbot.log",
+                caption="📋 StreakBot log file",
+            )
+        else:
+            await update.message.reply_text("No log file found yet.")
+        return
+
+    # /admin resetxp [user_id]
+    if args[0] == "resetxp" and len(args) > 1:
+        try:
+            target_id = int(args[1])
+        except ValueError:
+            await update.message.reply_text("Usage: /admin resetxp [user_id]")
+            return
+        import xp as xp_mod
+        xp_data = xp_mod.load_xp()
+        if str(target_id) in xp_data["users"]:
+            xp_data["users"][str(target_id)] = {"total": 0, "history": []}
+            xp_mod.save_xp(xp_data)
+            await update.message.reply_text(f"✅ XP reset for user {target_id}.")
+            log.info(f"XP reset for {target_id} by admin {user.id}")
+        else:
+            await update.message.reply_text(f"User {target_id} not found in XP data.")
+        return
+
+    await update.message.reply_text("Unknown admin command. Use /admin to see options.")
+
+
 async def set_bot_commands(bot: Bot):
     commands = [
         BotCommand("start", "Start the bot"),
+        BotCommand("help", "Detailed help — /help [daily/learning/course/xp]"),
+        BotCommand("about", "What StreakBot is and live stats"),
         BotCommand("report", "Submit today's learning"),
         BotCommand("streak", "View the shared dashboard"),
         BotCommand("summary", "AI summary of today"),
@@ -1162,6 +1510,8 @@ async def set_bot_commands(bot: Bot):
         BotCommand("weekly", "Week in review"),
         BotCommand("stats", "Learning stats"),
         BotCommand("history", "Show last N days"),
+        BotCommand("backup", "Download your data files (private chat)"),
+        BotCommand("admin", "Admin panel"),
         BotCommand("setreminder", "Change reminder time"),
         BotCommand("resetstreak", "Reset the streak"),
     ]
@@ -1170,6 +1520,8 @@ async def set_bot_commands(bot: Bot):
 
 
 def main():
+    _validate_config()
+
     # Start health check server for Koyeb (runs on port 8000)
     start_health_server(port=8000)
     log.info("Health check server started on port 8000")
@@ -1214,7 +1566,11 @@ def main():
     app.add_handler(report_handler)
     app.add_handler(quiz_handler)
     app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("help", help_cmd))
+    app.add_handler(CommandHandler("about", about_cmd))
     app.add_handler(CommandHandler("menu", menu_cmd))
+    app.add_handler(CommandHandler("backup", backup_cmd))
+    app.add_handler(CommandHandler("admin", admin_cmd))
     app.add_handler(CommandHandler("streak", streak_cmd))
     app.add_handler(CommandHandler("stats", stats_cmd))
     app.add_handler(CommandHandler("history", history_cmd))
