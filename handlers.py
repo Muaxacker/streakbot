@@ -1220,11 +1220,12 @@ async def lesson_pick_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     current_week = lessons_module.get_current_week_for_user(user.id)
-    rows, week = lessons_module.get_lesson_inline_keyboard(user.id, current_week)
+    rows, week, phase_label = lessons_module.get_lesson_inline_keyboard(user.id, current_week)
 
     await update.message.reply_text(
-        f"📚 <b>Pick a lesson — Week {week}</b>\n\n"
-        f"<i>Tap a lesson to mark steps, or navigate weeks.</i>",
+        f"📚 <b>Pick a lesson</b>\n"
+        f"<i>{phase_label} — Week {week}</i>\n\n"
+        f"Tap a lesson to mark steps, or use ◀ ▶ to navigate weeks.",
         parse_mode="HTML",
         reply_markup=InlineKeyboardMarkup(rows),
     )
@@ -1243,10 +1244,11 @@ async def lesson_pick_callback(update: Update, context: ContextTypes.DEFAULT_TYP
 
     if data.startswith("lesson_week:"):
         week = int(data.split(":")[1])
-        rows, week = lessons_module.get_lesson_inline_keyboard(user.id, week)
+        rows, week, phase_label = lessons_module.get_lesson_inline_keyboard(user.id, week)
         await query.edit_message_text(
-            f"📚 <b>Pick a lesson — Week {week}</b>\n\n"
-            f"<i>Tap a lesson to mark steps, or navigate weeks.</i>",
+            f"📚 <b>Pick a lesson</b>\n"
+            f"<i>{phase_label} — Week {week}</i>\n\n"
+            f"Tap a lesson to mark steps, or use ◀ ▶ to navigate weeks.",
             parse_mode="HTML",
             reply_markup=InlineKeyboardMarkup(rows),
         )
@@ -1285,7 +1287,7 @@ async def lesson_pick_callback(update: Update, context: ContextTypes.DEFAULT_TYP
 
         await query.edit_message_text(
             f"📖 <b>{lesson['title']}</b>\n"
-            f"Week {lesson['week']}  |  ID: {lesson_id}\n\n"
+            f"{lessons_module.PHASE_LABELS.get(lesson.get('phase', 1), '')} — Week {lesson['week']}\n\n"
             f"{v} Video  {n} Notes  {e} Exercise\n\n"
             f"{'✅ All done!' if lp['done_date'] else 'Tap to mark steps:'}",
             parse_mode="HTML",

@@ -22,65 +22,80 @@ log = logging.getLogger(__name__)
 LESSONS_FILE = "lessons.json"
 
 # ─── Evangadi Tech Full Stack Course ─────────────────────────────────────────
-# Add or edit lessons here to match the actual course order on Evangadi Tech
+# Full 5-phase curriculum — Fullstack Web Application Development
+# Update lesson titles here as you progress through the course.
+# Each entry: { "week": int, "id": str, "title": str, "phase": int }
 
 EVANGADI_COURSE = [
-    # Week 1 — HTML & CSS Fundamentals
-    {"week": 1, "id": "w1l1", "title": "HTML Structure and Semantics"},
-    {"week": 1, "id": "w1l2", "title": "CSS Basics and Box Model"},
-    {"week": 1, "id": "w1l3", "title": "Flexbox and Grid Layout"},
-    {"week": 1, "id": "w1l4", "title": "Responsive Design and Media Queries"},
 
-    # Week 2 — JavaScript Fundamentals
-    {"week": 2, "id": "w2l1", "title": "JavaScript Variables and Data Types"},
-    {"week": 2, "id": "w2l2", "title": "Functions and Scope"},
-    {"week": 2, "id": "w2l3", "title": "Arrays and Objects"},
-    {"week": 2, "id": "w2l4", "title": "DOM Manipulation"},
-    {"week": 2, "id": "w2l5", "title": "Events and Event Listeners"},
+    # ══════════════════════════════════════════════════════════════════════════
+    # PHASE 1 — Building Static Websites using HTML, CSS & Bootstrap
+    # Weeks 1–7 + Bonus Week
+    # ══════════════════════════════════════════════════════════════════════════
 
-    # Week 3 — Advanced JavaScript
-    {"week": 3, "id": "w3l1", "title": "Async JavaScript and Promises"},
-    {"week": 3, "id": "w3l2", "title": "Fetch API and AJAX"},
-    {"week": 3, "id": "w3l3", "title": "ES6+ Features"},
-    {"week": 3, "id": "w3l4", "title": "Error Handling"},
+    {"phase": 1, "week": 1,  "id": "p1w1l1",  "title": "Phase 1 — Week 1 (update with real topic)"},
+    {"phase": 1, "week": 2,  "id": "p1w2l1",  "title": "Phase 1 — Week 2 (update with real topic)"},
+    {"phase": 1, "week": 3,  "id": "p1w3l1",  "title": "Phase 1 — Week 3 (update with real topic)"},
+    {"phase": 1, "week": 4,  "id": "p1w4l1",  "title": "Phase 1 — Week 4 (update with real topic)"},
+    {"phase": 1, "week": 5,  "id": "p1w5l1",  "title": "Phase 1 — Week 5 (update with real topic)"},
+    {"phase": 1, "week": 6,  "id": "p1w6l1",  "title": "Phase 1 — Week 6 (update with real topic)"},
+    {"phase": 1, "week": 7,  "id": "p1w7l1",  "title": "Phase 1 — Week 7 (update with real topic)"},
+    {"phase": 1, "week": 8,  "id": "p1wbl1",  "title": "Phase 1 — Bonus Week (update with real topic)"},
 
-    # Week 4 — React Fundamentals
-    {"week": 4, "id": "w4l1", "title": "React Introduction and JSX"},
-    {"week": 4, "id": "w4l2", "title": "Components and Props"},
-    {"week": 4, "id": "w4l3", "title": "State and useState Hook"},
-    {"week": 4, "id": "w4l4", "title": "useEffect and Lifecycle"},
-    {"week": 4, "id": "w4l5", "title": "React Router"},
+    # ══════════════════════════════════════════════════════════════════════════
+    # PHASE 2 — Learn Coding with JavaScript
+    # Weeks 8–13 + Bonus Week
+    # ══════════════════════════════════════════════════════════════════════════
 
-    # Week 5 — React Advanced
-    {"week": 5, "id": "w5l1", "title": "Context API and State Management"},
-    {"week": 5, "id": "w5l2", "title": "Custom Hooks"},
-    {"week": 5, "id": "w5l3", "title": "Forms in React"},
-    {"week": 5, "id": "w5l4", "title": "API Integration in React"},
+    {"phase": 2, "week": 9,  "id": "p2w8l1",  "title": "Phase 2 — Week 8 (update with real topic)"},
+    {"phase": 2, "week": 10, "id": "p2w9l1",  "title": "Phase 2 — Week 9 (update with real topic)"},
+    {"phase": 2, "week": 11, "id": "p2w10l1", "title": "Phase 2 — Week 10 (update with real topic)"},
+    {"phase": 2, "week": 12, "id": "p2w11l1", "title": "Phase 2 — Week 11 (update with real topic)"},
+    {"phase": 2, "week": 13, "id": "p2w12l1", "title": "Phase 2 — Week 12 (update with real topic)"},
+    {"phase": 2, "week": 14, "id": "p2w13l1", "title": "Phase 2 — Week 13 (update with real topic)"},
+    {"phase": 2, "week": 15, "id": "p2wbl1",  "title": "Phase 2 — Bonus Week (update with real topic)"},
 
-    # Week 6 — Node.js and Express
-    {"week": 6, "id": "w6l1", "title": "Node.js Introduction"},
-    {"week": 6, "id": "w6l2", "title": "Express.js Basics"},
-    {"week": 6, "id": "w6l3", "title": "REST API Design"},
-    {"week": 6, "id": "w6l4", "title": "Middleware and Routing"},
+    # ══════════════════════════════════════════════════════════════════════════
+    # PHASE 3 — Node, Express, MySQL and React.js
+    # Weeks 14–20
+    # ══════════════════════════════════════════════════════════════════════════
 
-    # Week 7 — Database
-    {"week": 7, "id": "w7l1", "title": "SQL and MySQL Basics"},
-    {"week": 7, "id": "w7l2", "title": "Database Design and Relations"},
-    {"week": 7, "id": "w7l3", "title": "MySQL with Node.js"},
-    {"week": 7, "id": "w7l4", "title": "CRUD Operations"},
+    {"phase": 3, "week": 16, "id": "p3w14l1", "title": "Phase 3 — Week 14 (update with real topic)"},
+    {"phase": 3, "week": 17, "id": "p3w15l1", "title": "Phase 3 — Week 15 (update with real topic)"},
+    {"phase": 3, "week": 18, "id": "p3w16l1", "title": "Phase 3 — Week 16 (update with real topic)"},
+    {"phase": 3, "week": 19, "id": "p3w17l1", "title": "Phase 3 — Week 17 (update with real topic)"},
+    {"phase": 3, "week": 20, "id": "p3w18l1", "title": "Phase 3 — Week 18 (update with real topic)"},
+    {"phase": 3, "week": 21, "id": "p3w19l1", "title": "Phase 3 — Week 19 (update with real topic)"},
+    {"phase": 3, "week": 22, "id": "p3w20l1", "title": "Phase 3 — Week 20 (update with real topic)"},
 
-    # Week 8 — Authentication
-    {"week": 8, "id": "w8l1", "title": "Authentication Concepts"},
-    {"week": 8, "id": "w8l2", "title": "JWT Tokens"},
-    {"week": 8, "id": "w8l3", "title": "Bcrypt and Password Security"},
-    {"week": 8, "id": "w8l4", "title": "Protected Routes"},
+    # ══════════════════════════════════════════════════════════════════════════
+    # PHASE 4 — The Project Phase: Building Fullstack Applications
+    # Project Weeks 1–4
+    # ══════════════════════════════════════════════════════════════════════════
 
-    # Week 9 — Full Stack Integration
-    {"week": 9, "id": "w9l1", "title": "Connecting React to Express"},
-    {"week": 9, "id": "w9l2", "title": "CORS and Environment Variables"},
-    {"week": 9, "id": "w9l3", "title": "Full Stack Project Structure"},
-    {"week": 9, "id": "w9l4", "title": "Deployment Basics"},
+    {"phase": 4, "week": 23, "id": "p4pw1l1", "title": "Phase 4 — Project Week 1 (update with real topic)"},
+    {"phase": 4, "week": 24, "id": "p4pw2l1", "title": "Phase 4 — Project Week 2 (update with real topic)"},
+    {"phase": 4, "week": 25, "id": "p4pw3l1", "title": "Phase 4 — Project Week 3 (update with real topic)"},
+    {"phase": 4, "week": 26, "id": "p4pw4l1", "title": "Phase 4 — Project Week 4 (update with real topic)"},
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # PHASE 5 — Abe Garage Project: Building Fullstack App for Auto Repair Shop
+    # Abe Garage Project Weeks 1–3
+    # ══════════════════════════════════════════════════════════════════════════
+
+    {"phase": 5, "week": 27, "id": "p5ag1l1", "title": "Phase 5 — Abe Garage Week 1 (update with real topic)"},
+    {"phase": 5, "week": 28, "id": "p5ag2l1", "title": "Phase 5 — Abe Garage Week 2 (update with real topic)"},
+    {"phase": 5, "week": 29, "id": "p5ag3l1", "title": "Phase 5 — Abe Garage Week 3 (update with real topic)"},
 ]
+
+# ─── Phase labels (used in display) ──────────────────────────────────────────
+PHASE_LABELS = {
+    1: "Phase 1 — HTML, CSS & Bootstrap",
+    2: "Phase 2 — JavaScript",
+    3: "Phase 3 — Node, Express, MySQL & React",
+    4: "Phase 4 — Fullstack Projects",
+    5: "Phase 5 — Abe Garage Project",
+}
 
 
 # ─── Load / Save ──────────────────────────────────────────────────────────────
@@ -383,6 +398,11 @@ def get_lesson_inline_keyboard(user_id: int, week: int = None):
         week = get_current_week_for_user(user_id)
 
     week_lessons = get_lessons_for_week(week)
+
+    # Get phase label for this week
+    phase_num = week_lessons[0].get("phase", 1) if week_lessons else 1
+    phase_label = PHASE_LABELS.get(phase_num, f"Phase {phase_num}")
+
     rows = []
     for lesson in week_lessons:
         lp = get_user_lesson_progress(user_id, lesson["id"])
@@ -394,14 +414,19 @@ def get_lesson_inline_keyboard(user_id: int, week: int = None):
                 callback_data=f"lesson_pick:{lesson['id']}"
             )
         ])
-    # Navigation row
+
+    # Navigation row — find prev/next weeks that have lessons
+    all_weeks = sorted(set(l["week"] for l in EVANGADI_COURSE))
+    current_idx = all_weeks.index(week) if week in all_weeks else 0
+
     nav = []
-    if week > 1:
-        nav.append(InlineKeyboardButton(f"◀ Week {week-1}", callback_data=f"lesson_week:{week-1}"))
-    max_week = max(l["week"] for l in EVANGADI_COURSE)
-    if week < max_week:
-        nav.append(InlineKeyboardButton(f"Week {week+1} ▶", callback_data=f"lesson_week:{week+1}"))
+    if current_idx > 0:
+        prev_week = all_weeks[current_idx - 1]
+        nav.append(InlineKeyboardButton(f"◀ Week {prev_week}", callback_data=f"lesson_week:{prev_week}"))
+    if current_idx < len(all_weeks) - 1:
+        next_week = all_weeks[current_idx + 1]
+        nav.append(InlineKeyboardButton(f"Week {next_week} ▶", callback_data=f"lesson_week:{next_week}"))
     if nav:
         rows.append(nav)
     rows.append([InlineKeyboardButton("❌ Cancel", callback_data="lesson_cancel")])
-    return rows, week
+    return rows, week, phase_label
