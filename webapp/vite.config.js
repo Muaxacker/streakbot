@@ -3,7 +3,6 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
-  base: '/streakbot/',  // must match your GitHub repo name
   server: {
     proxy: {
       '/api': {
