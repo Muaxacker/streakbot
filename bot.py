@@ -134,8 +134,8 @@ MAIN_MENU = ReplyKeyboardMarkup(
         [KeyboardButton("/lessonpick"), KeyboardButton("/project status")],
         [KeyboardButton("/session start"), KeyboardButton("/voicecompare")],
         [KeyboardButton("/voicetranscript"), KeyboardButton("/progressreport")],
-        [KeyboardButton("/leaderboard"), KeyboardButton("/weekly")],
-        [KeyboardButton("/stats"), KeyboardButton("/help")],
+        [KeyboardButton("/dashboard"), KeyboardButton("/leaderboard")],
+        [KeyboardButton("/weekly"), KeyboardButton("/stats")],
     ],
     resize_keyboard=True,
     is_persistent=True,
@@ -1432,6 +1432,26 @@ async def voicetranscript_cancel(update: Update, context: ContextTypes.DEFAULT_T
     return ConversationHandler.END
 
 
+async def dashboard_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """/dashboard — open the StreakBot web dashboard as a Mini App"""
+    from telegram import InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
+
+    webapp_url = "https://streakbot.vercel.app"
+
+    await update.message.reply_text(
+        "📊 <b>StreakBot Dashboard</b>\n\n"
+        "Tap the button below to open your live dashboard.\n\n"
+        "Shows: streak, XP, course progress, stats, leaderboard.",
+        parse_mode=ParseMode.HTML,
+        reply_markup=InlineKeyboardMarkup([[
+            InlineKeyboardButton(
+                "🚀 Open Dashboard",
+                web_app=WebAppInfo(url=webapp_url)
+            )
+        ]])
+    )
+
+
 async def about_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """/about — what StreakBot is and who built it"""
     data = storage.load()
@@ -1605,6 +1625,7 @@ async def set_bot_commands(bot: Bot):
         BotCommand("start", "Start the bot"),
         BotCommand("help", "Detailed help — /help [daily/learning/course/xp]"),
         BotCommand("about", "What StreakBot is and live stats"),
+        BotCommand("dashboard", "Open the live web dashboard"),
         BotCommand("report", "Submit today's learning"),
         BotCommand("streak", "View the shared dashboard"),
         BotCommand("summary", "AI summary of today"),
@@ -1705,6 +1726,7 @@ def main():
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("help", help_cmd))
     app.add_handler(CommandHandler("about", about_cmd))
+    app.add_handler(CommandHandler("dashboard", dashboard_cmd))
     app.add_handler(CommandHandler("menu", menu_cmd))
     app.add_handler(CommandHandler("backup", backup_cmd))
     app.add_handler(CommandHandler("admin", admin_cmd))
