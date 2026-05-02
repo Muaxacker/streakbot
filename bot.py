@@ -51,6 +51,18 @@ import voice as voice_module
 from handlers import register_advanced_handlers
 from health import start_health_server
 
+
+def _start_api_server():
+    """Start the FastAPI dashboard API on port 8001 in a background thread."""
+    import threading
+    import uvicorn
+    from api import app as api_app
+
+    config = uvicorn.Config(api_app, host="0.0.0.0", port=8001, log_level="warning")
+    server = uvicorn.Server(config)
+    thread = threading.Thread(target=server.run, daemon=True)
+    thread.start()
+
 # ─── Config ───────────────────────────────────────────────────────────────────
 
 BOT_TOKEN     = os.getenv("BOT_TOKEN")
@@ -1627,9 +1639,13 @@ async def set_bot_commands(bot: Bot):
 def main():
     _validate_config()
 
-    # Start health check server for Koyeb (runs on port 8000)
+    # Start health check server for Koyeb (port 8000)
     start_health_server(port=8000)
     log.info("Health check server started on port 8000")
+
+    # Start dashboard API server (port 8001)
+    _start_api_server()
+    log.info("Dashboard API started on port 8001")
 
     app = ApplicationBuilder().token(BOT_TOKEN).build()
 
