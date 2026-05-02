@@ -32,6 +32,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Middleware to handle ngrok browser warning bypass
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request
+
+class NgrokBypassMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        response.headers["ngrok-skip-browser-warning"] = "true"
+        return response
+
+app.add_middleware(NgrokBypassMiddleware)
+
 USER1_ID = int(os.getenv("USER1_ID", "0"))
 USER2_ID = int(os.getenv("USER2_ID", "0"))
 
