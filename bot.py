@@ -323,6 +323,22 @@ async def process_both_reports(bot: Bot, data: dict):
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     storage.set_user_name(user.id, user.first_name)
+
+    # Handle deep link: /start dashboard
+    if context.args and context.args[0] == "dashboard":
+        from telegram import InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
+        await update.message.reply_text(
+            "📊 <b>StreakBot Dashboard</b>\n\n"
+            "Tap below to open your live dashboard.",
+            parse_mode=ParseMode.HTML,
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton(
+                    "🚀 Open Dashboard",
+                    web_app=WebAppInfo(url="https://streakbot.vercel.app")
+                )
+            ]])
+        )
+        return
     await update.message.reply_text(
         f"🚀 <b>StreakBot — Full System</b>\n\n"
         f"Hey <b>{safe(user.first_name)}</b> 👋\n\n"
@@ -1437,19 +1453,36 @@ async def dashboard_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     from telegram import InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
 
     webapp_url = "https://streakbot.vercel.app"
+    chat_type = update.effective_chat.type
 
-    await update.message.reply_text(
-        "📊 <b>StreakBot Dashboard</b>\n\n"
-        "Tap the button below to open your live dashboard.\n\n"
-        "Shows: streak, XP, course progress, stats, leaderboard.",
-        parse_mode=ParseMode.HTML,
-        reply_markup=InlineKeyboardMarkup([[
-            InlineKeyboardButton(
-                "🚀 Open Dashboard",
-                web_app=WebAppInfo(url=webapp_url)
-            )
-        ]])
-    )
+    if chat_type in ("group", "supergroup"):
+        # In groups, Web App buttons don't work — send a deep link instead
+        # that opens the bot in private chat where the button works
+        user = update.effective_user
+        await update.message.reply_text(
+            f"👤 <b>{safe(user.first_name)}</b>, tap below to open your dashboard in private chat:",
+            parse_mode=ParseMode.HTML,
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton(
+                    "🚀 Open Dashboard",
+                    url=f"https://t.me/mhstreakbot?start=dashboard"
+                )
+            ]])
+        )
+    else:
+        # Private chat — use proper Web App button
+        await update.message.reply_text(
+            "📊 <b>StreakBot Dashboard</b>\n\n"
+            "Tap the button below to open your live dashboard.\n\n"
+            "Shows: streak, XP, course progress, stats, leaderboard.",
+            parse_mode=ParseMode.HTML,
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton(
+                    "🚀 Open Dashboard",
+                    web_app=WebAppInfo(url=webapp_url)
+                )
+            ]])
+        )
 
 
 async def about_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
