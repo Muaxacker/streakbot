@@ -1320,11 +1320,21 @@ async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def voicetranscript_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """/voicetranscript — test voice transcription. Send a voice note, get back the text."""
+    """/voicetranscript — speaking coach: transcribe + full English analysis."""
     await update.message.reply_text(
-        "🎙 <b>Voice Transcript Test</b>\n\n"
-        "Send a voice note now and I'll transcribe it to text.\n\n"
-        "<i>This tests whether Groq Whisper is working correctly.\n"
+        "🎙 <b>Speaking Coach</b>\n"
+        "━━━━━━━━━━━━━━━━━━━━\n\n"
+        "Send a voice note and you'll get:\n\n"
+        "📝 Full transcription of what you said\n"
+        "📊 Fluency score (1-10)\n"
+        "✏️ Grammar mistakes with corrections\n"
+        "💬 Vocabulary improvements\n"
+        "🔇 Filler words detected (um, uh, like...)\n"
+        "🔍 Clarity and sentence structure\n"
+        "⚡ Speaking pace (words/minute)\n"
+        "💼 Interview readiness rating\n"
+        "🎯 One daily drill to fix your biggest weakness\n\n"
+        "<i>Speak naturally — pretend you're explaining something to a colleague.\n"
         "Use /canceltranscript to exit.</i>",
         parse_mode=ParseMode.HTML,
         reply_markup=MAIN_MENU,
@@ -1333,7 +1343,7 @@ async def voicetranscript_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE
 
 
 async def voicetranscript_receive(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Receive the voice note, transcribe it, send back the text."""
+    """Receive the voice note, transcribe it, then run full speaking analysis."""
     voice = update.message.voice
     if not voice:
         await update.message.reply_text(
@@ -1372,15 +1382,32 @@ async def voicetranscript_receive(update: Update, context: ContextTypes.DEFAULT_
         return ConversationHandler.END
 
     word_count = len(transcript.split())
+
+    # Send the raw transcript first so they can read it immediately
     await update.message.reply_text(
-        f"✅ <b>Transcription successful!</b>\n\n"
-        f"⏱ Duration: {duration}s\n"
-        f"📝 Words: {word_count}\n\n"
-        f"<b>Text:</b>\n<i>{safe(transcript)}</i>",
+        f"✅ <b>Transcription done!</b>\n\n"
+        f"⏱ {duration}s  |  📝 {word_count} words\n\n"
+        f"<b>What you said:</b>\n<i>{safe(transcript)}</i>\n\n"
+        f"🤖 <i>Analysing your English speaking...</i>",
+        parse_mode=ParseMode.HTML,
+    )
+
+    # Run full speaking analysis
+    analysis = ai.analyze_speaking(transcript, storage.get_user_name(update.effective_user.id), duration)
+    report = ai.format_speaking_analysis(
+        storage.get_user_name(update.effective_user.id),
+        transcript,
+        duration,
+        analysis,
+    )
+
+    await update.message.reply_text(
+        report,
         parse_mode=ParseMode.HTML,
         reply_markup=MAIN_MENU,
     )
-    log.info(f"Voice transcript test by user {update.effective_user.id}: {word_count} words")
+
+    log.info(f"Voice transcript+analysis by user {update.effective_user.id}: {word_count} words")
     return ConversationHandler.END
 
 
@@ -1575,7 +1602,7 @@ async def set_bot_commands(bot: Bot):
         BotCommand("comparescores", "Compare both accountability scores"),
         BotCommand("struggles", "Your struggle topics"),
         BotCommand("voicecompare", "Compare voice explanations with partner"),
-        BotCommand("voicetranscript", "Test voice transcription — send voice, get text"),
+        BotCommand("voicetranscript", "Speaking coach — transcribe + grammar + fluency analysis"),
         BotCommand("session", "Log a live code review session"),
         BotCommand("progressreport", "Monthly or weekly progress report"),
         BotCommand("lessonpick", "Pick a lesson from an interactive list"),

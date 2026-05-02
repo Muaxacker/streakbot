@@ -425,3 +425,210 @@ No markdown. Under 60 words."""
             f"Every day you report makes the next one easier. Use /report now."
         )
     return result
+
+
+def analyze_speaking(transcript: str, name: str, duration: int) -> dict:
+    """
+    Full English speaking analysis for interview preparation.
+    Returns a structured dict with all analysis sections.
+    """
+    words = transcript.split()
+    word_count = len(words)
+    words_per_minute = round(word_count / (duration / 60)) if duration > 0 else 0
+
+    prompt = f"""You are an expert English speaking coach helping {name} improve their spoken English for technical job interviews.
+
+They spoke for {duration} seconds ({word_count} words, ~{words_per_minute} words/minute).
+
+Transcription of what they said:
+\"\"\"{transcript}\"\"\"
+
+Analyze their speaking across ALL of these areas. Be specific — reference their actual words, not generic advice.
+
+GRAMMAR
+List up to 3 grammar mistakes found. For each: show the wrong version, then the correct version.
+Format: "Said: [wrong] → Should be: [correct] — [brief reason]"
+If no mistakes: write "No grammar errors found."
+
+VOCABULARY
+List up to 3 weak or repeated words with better alternatives.
+Format: "[word used] → better: [alternatives] — [why it's stronger]"
+If vocabulary is strong: write "Vocabulary is solid."
+
+FILLER WORDS
+List any filler words or phrases found (um, uh, like, you know, basically, kind of, sort of, I mean).
+Count how many times each appeared.
+If none: write "No filler words detected — clean delivery."
+
+CLARITY
+Rate their sentence structure: Clear / Mostly clear / Needs work
+Note any incomplete thoughts, run-on sentences, or confusing phrasing.
+
+FLUENCY SCORE
+Give a score from 1 to 10.
+1-3: Very broken, hard to follow
+4-5: Basic, many gaps
+6-7: Conversational, some rough edges
+8-9: Smooth and confident
+10: Native-level fluency
+
+SPEAKING PACE
+{words_per_minute} words/minute. Comment on whether this is too fast, too slow, or ideal for an interview.
+Ideal interview pace: 120-150 words/minute.
+
+INTERVIEW READINESS
+Would this answer impress a technical interviewer? Rate: Not ready / Needs work / Acceptable / Strong / Excellent
+Give 1 sentence of honest feedback.
+
+ONE DRILL
+Give ONE specific exercise they should practice daily to fix their biggest weakness.
+Make it concrete and doable in 5 minutes.
+
+Respond ONLY in the exact format above with these exact section headers. Be direct and honest — this person wants to improve, not be flattered."""
+
+    raw = _ask(prompt, max_tokens=900)
+    return _parse_speaking_analysis(raw, words_per_minute)
+
+
+def _parse_speaking_analysis(raw: str, wpm: int) -> dict:
+    """Parse the structured speaking analysis response."""
+    sections = {
+        "grammar": "",
+        "vocabulary": "",
+        "filler_words": "",
+        "clarity": "",
+        "fluency_score": "",
+        "speaking_pace": "",
+        "interview_readiness": "",
+        "one_drill": "",
+        "wpm": wpm,
+        "raw": raw,
+    }
+
+    current_section = None
+    lines_buffer = []
+
+    section_map = {
+        "GRAMMAR": "grammar",
+        "VOCABULARY": "vocabulary",
+        "FILLER WORDS": "filler_words",
+        "CLARITY": "clarity",
+        "FLUENCY SCORE": "fluency_score",
+        "SPEAKING PACE": "speaking_pace",
+        "INTERVIEW READINESS": "interview_readiness",
+        "ONE DRILL": "one_drill",
+    }
+
+    for line in raw.strip().split("\n"):
+        stripped = line.strip()
+        matched = False
+        for header, key in section_map.items():
+            if stripped.upper().startswith(header):
+                if current_section and lines_buffer:
+                    sections[current_section] = "\n".join(lines_buffer).strip()
+                current_section = key
+                lines_buffer = []
+                # Capture inline content after the header
+                after = stripped[len(header):].lstrip(": ").strip()
+                if after:
+                    lines_buffer.append(after)
+                matched = True
+                break
+        if not matched and current_section and stripped:
+            lines_buffer.append(stripped)
+
+    if current_section and lines_buffer:
+        sections[current_section] = "\n".join(lines_buffer).strip()
+
+    return sections
+
+
+def format_speaking_analysis(name: str, transcript: str,
+                              duration: int, analysis: dict) -> str:
+    """Format the full speaking analysis as a Telegram HTML message."""
+    wpm = analysis.get("wpm", 0)
+    word_count = len(transcript.split())
+
+    # Fluency score emoji
+    score_text = analysis.get("fluency_score", "")
+    score_num = 0
+    for part in score_text.split():
+        try:
+            score_num = int(part)
+            break
+        except ValueError:
+            continue
+
+    score_emoji = (
+        "🏆" if score_num >= 9 else
+        "⭐" if score_num >= 7 else
+        "👍" if score_num >= 5 else
+        "📖" if score_num >= 3 else "💀"
+    )
+
+    lines = [
+        f"🎙 <b>Speaking Analysis — {name}</b>",
+        "━━━━━━━━━━━━━━━━━━━━",
+        f"⏱ {duration}s  |  📝 {word_count} words  |  🚀 {wpm} wpm",
+        "",
+    ]
+
+    if analysis.get("fluency_score"):
+        lines += [
+            f"{score_emoji} <b>Fluency Score</b>",
+            analysis["fluency_score"],
+            "",
+        ]
+
+    if analysis.get("interview_readiness"):
+        lines += [
+            "💼 <b>Interview Readiness</b>",
+            analysis["interview_readiness"],
+            "",
+        ]
+
+    if analysis.get("grammar"):
+        lines += [
+            "📝 <b>Grammar</b>",
+            analysis["grammar"],
+            "",
+        ]
+
+    if analysis.get("vocabulary"):
+        lines += [
+            "💬 <b>Vocabulary</b>",
+            analysis["vocabulary"],
+            "",
+        ]
+
+    if analysis.get("filler_words"):
+        lines += [
+            "🔇 <b>Filler Words</b>",
+            analysis["filler_words"],
+            "",
+        ]
+
+    if analysis.get("clarity"):
+        lines += [
+            "🔍 <b>Clarity</b>",
+            analysis["clarity"],
+            "",
+        ]
+
+    if analysis.get("speaking_pace"):
+        lines += [
+            "⚡ <b>Speaking Pace</b>",
+            analysis["speaking_pace"],
+            "",
+        ]
+
+    if analysis.get("one_drill"):
+        lines += [
+            "🎯 <b>Daily Drill (5 min)</b>",
+            analysis["one_drill"],
+            "",
+        ]
+
+    lines.append("<i>Use /voicetranscript again to practice and track improvement.</i>")
+
+    return "\n".join(lines)
