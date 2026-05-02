@@ -1,0 +1,39 @@
+# Environment variables — never commit these
+.env
+
+# Runtime data files — contain personal data and streak history
+data.json
+xp.json
+lessons.json
+sessions.json
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Virtual environments
+venv/
+env/
+.venv/
+.env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Logs
+*.log
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
